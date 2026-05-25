@@ -1,6 +1,6 @@
 /**
  * @file G2MentraProtocol.h
- * @brief Even G2 スマートグラス向け BLE トランスポート／プロトコルヘルパー。
+ * @brief Even G2 スマートグラス向け BLE トランスポート／プロトコルヘルパー。(port from Mentra OS Project)
  *
  * Mentra OS プロジェクト (MIT) の G2.kt を参考に C++ へ移植したプロトコル実装。
  * BLE パケットの組み立て・分解、軽量 Protobuf エンコーダ、各種コマンドビルダーを提供する。

@@ -1,6 +1,6 @@
 /**
  * @file G2MentraProtocol.cpp
- * @brief Even G2 BLE プロトコルヘルパーの実装。
+ * @brief Even G2 BLE プロトコルヘルパーの実装。(port from Mentra OS Project)
  *
  * buildBlePackets() で BLE トランスポートフレームを構築し、
  * TransportAssembler でマルチパケットを再組み立てする。
