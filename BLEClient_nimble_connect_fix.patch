@@ -1,0 +1,56 @@
+# Patch captured from the local M5Stack Arduino 3.3.7 NimBLE workaround used during
+# Even G2 bring-up.
+#
+# Intended target file:
+#   %LOCALAPPDATA%\Arduino15\packages\m5stack\hardware\esp32\3.3.7\libraries\BLE\src\BLEClient.cpp
+#
+# This patch documents the exact local edits that were present in the investigation
+# environment. It may need rebasing for other board-package versions.
+
+--- a/libraries/BLE/src/BLEClient.cpp
++++ b/libraries/BLE/src/BLEClient.cpp
+@@
+-  if (!BLEUtils::taskWait(taskData, m_connectTimeout + 1000)) {
+-    // workaround; if the controller doesn't cancel the connection at the timeout, cancel it here.
+-    log_e("Connect timeout - canceling");
+-    ble_gap_conn_cancel();
+-    taskData.m_flags = BLE_HS_ETIMEOUT;
+-  }
++  if (!BLEUtils::taskWait(taskData, m_connectTimeout + 1000)) {
++    // If a connection was made but no response from MTU exchange proceed anyway
++    if (isConnected()) {
++      taskData.m_flags = 0;
++    } else {
++      // workaround; if the controller doesn't cancel the connection at the timeout, cancel it here.
++      log_e("Connect timeout - canceling");
++      ble_gap_conn_cancel();
++      taskData.m_flags = BLE_HS_ETIMEOUT;
++    }
++  }
+@@
+-        client->m_conn_id = event->connect.conn_handle;
+-        client->m_isConnected = true;  // Flag us as connected.
+-
+-        rc = ble_gattc_exchange_mtu(client->m_conn_id, nullptr, nullptr);
+-        if (rc != 0) {
+-          log_e("BLEClient", "MTU exchange error; rc=%d %s", rc, BLEUtils::returnCodeToString(rc));
+-          break;
+-        }
++        client->m_conn_id = event->connect.conn_handle;
++
++        // Treat the GAP connect event as sufficient to unblock connect().
++        // Some peripherals establish the link but never deliver a follow-up
++        // MTU event, which would otherwise leave connect() blocked until its
++        // timeout despite the connection already existing.
++        // Keep m_isConnected unchanged here; connect() sets it after the wait
++        // completes so pre-connect disconnects still follow the library's
++        // normal failure path and do not fire app callbacks too early.
++        if (pTaskData != nullptr) {
++          BLEUtils::taskRelease(*pTaskData, 0);
++        }
++
++        rc = ble_gattc_exchange_mtu(client->m_conn_id, nullptr, nullptr);
++        if (rc != 0) {
++          log_w("BLEClient", "MTU exchange error after connect; rc=%d %s", rc, BLEUtils::returnCodeToString(rc));
++          rc = 0;
++        }
